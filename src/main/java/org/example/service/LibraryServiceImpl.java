@@ -1,186 +1,108 @@
 package org.example.service;
 
-import org.example.Model.Book;
-import org.example.Model.BookDto;
-import org.example.Model.User;
+import org.example.Model.*;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class LibraryServiceImpl implements LibraryService {
-    private final List<User> users;
-    private final Map<Book, Integer> books;
-    private final Map<Book, LocalDate> rentedBooks;
+    private final BookService bookService;
+    private final UserService userService;
 
-    public LibraryServiceImpl() {
-        this.users = new ArrayList<>();
-        this.books = new HashMap<>();
-        this.rentedBooks = new HashMap<>();
+
+    public LibraryServiceImpl(BookService bookService, UserService userService) {
+        this.bookService = bookService;
+        this.userService = userService;
     }
 
+    @Override
     public String addBook(BookDto bookDto) {
-        Book book = books.keySet().stream()
-                .filter(b -> b.getTitle().equals(bookDto.getTitle()) && b.getAuthor().equals(bookDto.getAuthor()))
-                .findFirst()
-                .orElse(null);
+        if (!Validation.isBookDtoValid(bookDto)) {
+            throw new IllegalArgumentException("Book is not valid");
+        }
+        return bookService.addBook(bookDto);
+    }
 
-        if (book != null) {
-            books.put(book, books.get(book) + 1);
-        } else {
-            book = new Book(bookDto);
-            books.put(book, 1);
+    @Override
+    public boolean removeBook(String bookId) {
+        boolean isSuccess = bookService.removeBook(bookId);
+
+        if (!isSuccess) {
+            throw new IllegalArgumentException("Book not found");
         }
 
-        return book.getId();
+        return true;
     }
 
-    public String addUser(String name) {
-        User user = users.stream()
-                .filter(u -> u.getName().equals(name))
-                .findFirst()
-                .orElse(null);
+    @Override
+    public String addUser(UserDto userDto) {
+        if (!Validation.isUserDtoValid(userDto)) {
+            throw new IllegalArgumentException("User is not valid");
+        }
 
-        if (user != null) {
+        Optional<String> newUserId = userService.addUser(userDto);
+
+        if (newUserId.isEmpty()) {
             throw new IllegalArgumentException("User already exists");
         }
 
-        User newUser = new User(name);
-        users.add(newUser);
-
-        return newUser.getId();
+        return newUserId.get();
     }
 
-    public void removeBook(String bookId) {
-        Book book = books.keySet().stream()
-                .filter(b -> b.getId().equals(bookId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+    @Override
+    public boolean removeUser(String userId) {
+        boolean isSuccess = userService.removeUser(userId);
 
-
-        if (books.get(book) > 1) {
-            books.put(book, books.get(book) - 1);
-            return;
+        if (!isSuccess) {
+            throw new IllegalArgumentException("User not found");
         }
 
-        books.remove(book);
+        return true;
     }
 
-    public void removeUser(String userId) {
-        User user = users.stream()
-                .filter(u -> u.getId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        users.remove(user);
+    @Override
+    public void borrowBook(String bookId, String userId) {
+        userService.borrowBook(bookId, userId);
+        bookService.decreaseQuantity(bookId);
     }
 
-    public String rentBook(String bookId, String userId) {
-        User user = users.stream()
-                .filter(u -> u.getId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-
-        if (user.hasBeenBlocked()) {
-            throw new IllegalArgumentException("User has been blocked");
-        }
-
-
-        if (user.getRentedBooks().stream().filter(b -> b.equals(bookId)).findFirst().orElse(null) != null) {
-            throw new IllegalArgumentException("User is already renting a book");
-        }
-
-
-        Book bookToRent = books.keySet().stream()
-                .filter(b -> b.getId().equals(bookId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Book not found"));
-
-
-        if (books.get(bookToRent) == 0) {
-            throw new IllegalArgumentException("Book is not available");
-        }
-
-        user.addBook(bookToRent.getId());
-        rentedBooks.put(bookToRent, LocalDate.now().plusDays(7));
-
-        books.put(bookToRent, books.get(bookToRent) - 1);
-
-        return bookToRent.getId();
-    }
-
+    @Override
     public void returnBook(String bookId, String userId) {
-        User user = users.stream()
-                .filter(u -> u.getId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Integer days = userService.returnBook(bookId, userId);
 
-        Book rentedBook = rentedBooks.keySet().stream()
-                .filter(b -> b.getId().equals(bookId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+        if (days > 10) {
+            userService.addPenaltyPoints(userId, days);
+        }
 
-
-        String userBookId = user.getRentedBooks().stream()
-                .filter(b -> b.equals(bookId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("User is not renting a book"));
-
-
-        int daysAfterDueDate = (int) ChronoUnit.DAYS.between(rentedBooks.get(rentedBook), LocalDate.now());
-
-        user.addPenaltyPoints(daysAfterDueDate);
-
-        user.removeBook(userBookId);
-
-        rentedBooks.remove(rentedBook);
-
-        books.put(rentedBook, books.get(rentedBook) + 1);
+        bookService.increaseQuantity(bookId);
     }
 
-    public Map<Book, Integer> getBooks() {
-        return books;
+    @Override
+    public List<BookStock> getBooksStock() {
+        Optional<List<BookStock>> booksStock = bookService.getBooksStock();
+
+        if (booksStock.isEmpty()) {
+            throw new IllegalArgumentException("No books in stock");
+        }
+
+        return booksStock.get();
     }
 
+    @Override
     public List<User> getUsers() {
-        return users;
+        Optional<List<User>> users = userService.getUsers();
+
+        if (users.isEmpty()) {
+            throw new IllegalArgumentException("No users");
+        }
+
+        return users.get();
     }
 
-    public Map<Book, LocalDate> getRentedBooks() {
-        return rentedBooks;
-    }
-
-    public Book getBook(String bookId) {
-        return books.keySet().stream()
-                .filter(b -> b.getId().equals(bookId))
-                .findFirst()
-                .orElse(null);
-    }
-
-    public Book getRentedBook(String bookId) {
-        return rentedBooks.keySet().stream()
-                .filter(b -> b.getId().equals(bookId))
-                .findFirst()
-                .orElse(null);
-    }
-
-    public User getUser(String userId) {
-        return users.stream()
-                .filter(u -> u.getId().equals(userId))
-                .findFirst()
-                .orElse(null);
-    }
-
-    public void setBookDueDate(String bookId, LocalDate date) {
-        Book rentedBook = rentedBooks.keySet().stream()
-                .filter(b -> b.getId().equals(bookId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Book not found"));
-
-        rentedBooks.put(rentedBook, date);
+    @Override
+    public Map<String, LocalDate> getBorrowedBooks(String userId) {
+        return userService.getBorrowedBooks(userId);
     }
 }

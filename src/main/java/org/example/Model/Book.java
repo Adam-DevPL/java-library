@@ -1,10 +1,5 @@
 package org.example.Model;
 
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 public class Book {
@@ -50,5 +45,13 @@ public class Book {
                 ", title='" + title + '\'' +
                 ", author='" + author + '\'' +
                 '}';
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthor() {
+        return author;
     }
 }

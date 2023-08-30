@@ -1,8 +1,6 @@
 package org.example.service;
 
-import org.example.Model.Book;
-import org.example.Model.BookDto;
-import org.example.Model.User;
+import org.example.Model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,324 +13,229 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LibraryServiceImplTest {
     private LibraryService libraryService;
+    private BookService bookService;
+    private UserService userService;
 
     @BeforeEach
-    public void setUp() {
-        libraryService = new LibraryServiceImpl();
+    void setUp() {
+        bookService = new BookServiceImpl();
+        userService = new UserServiceImpl();
+        libraryService = new LibraryServiceImpl(bookService, userService);
     }
 
     @Test
-    @DisplayName("adding single book")
-    public void testAddBook() {
+    @DisplayName("Add book")
+    void addBook() {
         //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
+        BookDto bookDto = new BookDto("title", "author");
 
         //when
-        Book book = libraryService.getBook(bookId);
-        Map<Book, Integer> books = libraryService.getBooks();
+        String bookId = libraryService.addBook(bookDto);
+        List<BookStock> booksStock = libraryService.getBooksStock();
 
         //then
         assertNotNull(bookId);
-        assertNotNull(book);
-        assertEquals("Test Book", book.getTitle());
-        assertEquals("Test Author", book.getAuthor());
-        assertTrue(books.containsKey(book));
-        assertEquals(1, books.get(book));
+        assertEquals(1, booksStock.size());
+        assertEquals(1, booksStock.get(0).getQuantity());
+        assertEquals(bookId, booksStock.get(0).getBook().getId());
     }
 
     @Test
-    @DisplayName("adding two the same books to the library -> should increase the number of books by 1")
-    public void testAddTwoTheSameBooks() {
+    @DisplayName("Add book - multiple books")
+    void addBook_multipleBooks() {
         //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
+        BookDto bookDto = new BookDto("title", "author");
+        BookDto bookDto2 = new BookDto("title", "author");
 
         //when
-        String bookId1 = libraryService.addBook(bookDto);
-        String bookId2 = libraryService.addBook(bookDto);
-        Book book1 = libraryService.getBook(bookId1);
-        Book book2 = libraryService.getBook(bookId2);
-        Map<Book, Integer> books = libraryService.getBooks();
-
-        //then
-        assertEquals(book1, book2);
-        assertTrue(books.containsKey(book1));
-        assertEquals(2, books.get(book1));
-    }
-
-    @Test
-    @DisplayName("adding two different books to the library -> should be two different books in the library")
-    public void testAddTwoDifferentBooks() {
-        //given
-        BookDto bookDto1 = new BookDto("Test Book", "Test Author");
-        BookDto bookDto2 = new BookDto("Test Book2", "Test Author2");
-
-        //when
-        String bookId1 = libraryService.addBook(bookDto1);
+        String bookId = libraryService.addBook(bookDto);
         String bookId2 = libraryService.addBook(bookDto2);
-        Book book1 = libraryService.getBook(bookId1);
-        Book book2 = libraryService.getBook(bookId2);
-        Map<Book, Integer> books = libraryService.getBooks();
+        List<BookStock> booksStock = libraryService.getBooksStock();
 
         //then
-        assertNotEquals(book1, book2);
-        assertEquals(1, books.get(book1));
-        assertEquals(1, books.get(book2));
+        assertNotNull(bookId);
+        assertNotNull(bookId2);
+        assertEquals(1, booksStock.size());
+        assertEquals(2, booksStock.get(0).getQuantity());
+        assertEquals(bookId, booksStock.get(0).getBook().getId());
+        assertEquals(bookId2, booksStock.get(0).getBook().getId());
     }
 
     @Test
-    public void testAddUser() {
+    @DisplayName("Add book - multiple books - remove one")
+    void addBook_multipleBooks_removeOne() {
         //given
-        String userId = libraryService.addUser("Test User");
+        BookDto bookDto = new BookDto("title", "author");
+        BookDto bookDto2 = new BookDto("title", "author");
 
         //when
-        User user = libraryService.getUser(userId);
+        String bookId = libraryService.addBook(bookDto);
+        String bookId2 = libraryService.addBook(bookDto2);
+        libraryService.removeBook(bookId);
+        List<BookStock> booksStock = libraryService.getBooksStock();
+
+        //then
+        assertNotNull(bookId);
+        assertNotNull(bookId2);
+        assertEquals(1, booksStock.size());
+        assertEquals(1, booksStock.get(0).getQuantity());
+        assertEquals(bookId2, booksStock.get(0).getBook().getId());
+    }
+
+    @Test
+    @DisplayName("Add book - multiple books - remove all")
+    void addBook_multipleBooks_removeAll() {
+        //given
+        BookDto bookDto = new BookDto("title", "author");
+        BookDto bookDto2 = new BookDto("title", "author");
+
+        //when
+        String bookId = libraryService.addBook(bookDto);
+        String bookId2 = libraryService.addBook(bookDto2);
+        libraryService.removeBook(bookId);
+        libraryService.removeBook(bookId2);
+        List<BookStock> booksStock = libraryService.getBooksStock();
+
+        //then
+        assertNotNull(bookId);
+        assertNotNull(bookId2);
+        assertEquals(0, booksStock.size());
+    }
+
+    @Test
+    @DisplayName("remove book when not in stock - throw exception")
+    void removeBook_notInStock() {
+        //given
+        String bookId = "bookId";
+        //then
+        assertThrows(IllegalArgumentException.class, () -> libraryService.removeBook(bookId));
+    }
+
+    @Test
+    @DisplayName("add user")
+    void addUser() {
+        //given
+        String userName = "userName";
+        UserDto userDto = new UserDto(userName);
+
+        //when
+        String userId = libraryService.addUser(userDto);
         List<User> users = libraryService.getUsers();
 
         //then
         assertNotNull(userId);
-        assertNotNull(user);
-        assertEquals("Test User", user.getName());
-        assertTrue(users.contains(user));
+        assertEquals(1, users.size());
+        assertEquals(userId, users.get(0).getId());
+        assertEquals(userName, users.get(0).getName());
     }
 
     @Test
-    public void testAddUserFailed() {
+    @DisplayName("add the same user twice - throw exception")
+    void addUser_theSameUserTwice() {
         //given
-        libraryService.addUser("Test User");
-
-        //then
-        assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.addUser("Test User"), "User already exists");
-    }
-
-    @Test
-    public void testRemoveBook() {
-        //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-        Book book = libraryService.getBook(bookId);
-        assertNotNull(book);
+        String userName = "userName";
+        UserDto userDto = new UserDto(userName);
 
         //when
-        libraryService.removeBook(bookId);
-        book = libraryService.getBook(bookId);
-        Map<Book, Integer> books = libraryService.getBooks();
-
-        //then
-        assertNull(book);
-        assertFalse(books.containsKey(book));
+        String userId = libraryService.addUser(userDto);
+        assertThrows(IllegalArgumentException.class, () -> libraryService.addUser(userDto));
     }
 
     @Test
-    public void testRemoveBookWhenMoreInStock() {
+    @DisplayName("remove user")
+    void removeUser() {
         //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-        libraryService.addBook(bookDto);
-
-        Book book = libraryService.getBook(bookId);
-        assertNotNull(book);
+        String userName = "userName";
+        UserDto userDto = new UserDto(userName);
 
         //when
-        libraryService.removeBook(bookId);
-        book = libraryService.getBook(bookId);
-        Map<Book, Integer> books = libraryService.getBooks();
-
-        //then
-        assertNotNull(book);
-        assertTrue(books.containsKey(book));
-        assertEquals(1, books.get(book));
-    }
-
-    @Test
-    public void testRemoveBookFailed() {
-        assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.removeBook("123"), "Book not found");
-    }
-
-    @Test
-    public void testRemoveUser() {
-        //given
-        String userId = libraryService.addUser("Test User");
-
-        User user = libraryService.getUser(userId);
-        assertNotNull(user);
-
-        //when
-        libraryService.removeUser(userId);
-        user = libraryService.getUser(userId);
+        String userId = libraryService.addUser(userDto);
+        boolean isSuccess = libraryService.removeUser(userId);
         List<User> users = libraryService.getUsers();
 
         //then
-        assertNull(user);
-        assertFalse(users.contains(user));
+        assertNotNull(userId);
+        assertTrue(isSuccess);
+        assertEquals(0, users.size());
     }
 
     @Test
-    public void testRemoveUserFailed() {
-        assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.removeUser("123"), "User not found");
+    @DisplayName("remove not existing user")
+    void removeUser_notExistingUser() {
+        //then
+        assertThrows(IllegalArgumentException.class, () -> libraryService.removeUser("userId"));
     }
 
     @Test
-    public void testRentBook() {
+    @DisplayName("borrow book")
+    void borrowBook() {
         //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
+        String userName = "userName";
+        UserDto userDto = new UserDto(userName);
+        String userId = libraryService.addUser(userDto);
+        BookDto bookDto = new BookDto("title", "author");
         String bookId = libraryService.addBook(bookDto);
-        String userId = libraryService.addUser("Test User");
 
         //when
-        String rentedBookId = libraryService.rentBook(bookId, userId);
-        Map<Book, LocalDate> rentedBooks = libraryService.getRentedBooks();
-        Map<Book, Integer> books = libraryService.getBooks();
-        User user = libraryService.getUser(userId);
-        String userRentedBookId = user.getSingleRentedBook(bookId);
+        libraryService.borrowBook(bookId, userId);
+        List<BookStock> booksStock = libraryService.getBooksStock();
+        Map<String, LocalDate> borrowedBooks = libraryService.getBorrowedBooks(userId);
 
         //then
-        assertNotNull(rentedBookId);
-        assertEquals(bookId, rentedBookId);
-        assertEquals(1, rentedBooks.size());
-        assertEquals(userRentedBookId, rentedBookId);
+        assertEquals(0, booksStock.get(0).getQuantity());
+        assertEquals(1, borrowedBooks.size());
+        assertEquals(bookId, borrowedBooks.keySet().iterator().next());
     }
 
     @Test
-    @DisplayName("user not found when renting a book -> should throw exception")
-    public void testRentBookFailedUserNotFound() {
+    @DisplayName("borrow book - multiple books")
+    void borrowBook_multipleBooks() {
         //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
+        String userName = "userName";
+        UserDto userDto = new UserDto(userName);
+        String userId = libraryService.addUser(userDto);
+        BookDto bookDto = new BookDto("title", "author");
         String bookId = libraryService.addBook(bookDto);
-
-        //then
-        assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.rentBook(bookId, "123"), "User not found");
-    }
-
-    @Test
-    @DisplayName("book not found when renting a book -> should throw exception")
-    public void testRentBookFailedBookNotFound() {
-        //given
-        String userId = libraryService.addUser("Test User");
-
-        //then
-        assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.rentBook("123", userId), "Book not found");
-    }
-
-    @Test
-    @DisplayName("user is already renting a book -> should throw exception")
-    public void testRentBookFailedUserAlreadyRenting() {
-        //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-        String userId = libraryService.addUser("Test User");
+        BookDto bookDto2 = new BookDto("title2", "author");
+        String bookId2 = libraryService.addBook(bookDto2);
 
         //when
-        libraryService.rentBook(bookId, userId);
-        IllegalArgumentException exception = assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.rentBook(bookId, userId));
+        libraryService.borrowBook(bookId, userId);
+        libraryService.borrowBook(bookId2, userId);
+        List<BookStock> booksStock = libraryService.getBooksStock();
+        Map<String, LocalDate> borrowedBooks = libraryService.getBorrowedBooks(userId);
 
         //then
-        assertEquals(IllegalArgumentException.class, exception.getClass());
-        assertEquals("User is already renting a book", exception.getMessage());
+        assertEquals(0, booksStock.get(0).getQuantity());
+        assertEquals(0, booksStock.get(1).getQuantity());
+        assertEquals(2, borrowedBooks.size());
+        assertTrue(borrowedBooks.containsKey(bookId));
+        assertTrue(borrowedBooks.containsKey(bookId2));
     }
 
     @Test
-    @DisplayName("book is not in stock -> should throw exception")
-    public void testRentBookFailedBookNotInStock() {
+    @DisplayName("borrow book - multiple books - remove one")
+    void borrowBook_multipleBooks_removeOne() {
         //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
+        String userName = "userName";
+        UserDto userDto = new UserDto(userName);
+        String userId = libraryService.addUser(userDto);
+        BookDto bookDto = new BookDto("title", "author");
         String bookId = libraryService.addBook(bookDto);
-        String userId = libraryService.addUser("Test User");
-        String userId2 = libraryService.addUser("Test User2");
+        BookDto bookDto2 = new BookDto("title2", "author");
+        String bookId2 = libraryService.addBook(bookDto2);
 
         //when
-        libraryService.rentBook(bookId, userId);
-        IllegalArgumentException exception = assertThrowsExactly(IllegalArgumentException.class, () -> libraryService.rentBook(bookId, userId2));
-
-        //then
-        assertEquals(IllegalArgumentException.class, exception.getClass());
-        assertEquals("Book is not available", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("user return book -> should return book to stock")
-    public void testReturnBook() {
-        //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-        String userId = libraryService.addUser("Test User");
-        libraryService.rentBook(bookId, userId);
-
-        //when
+        libraryService.borrowBook(bookId, userId);
+        libraryService.borrowBook(bookId2, userId);
         libraryService.returnBook(bookId, userId);
-        Map<Book, Integer> books = libraryService.getBooks();
-        Map<Book, LocalDate> rentedBooks = libraryService.getRentedBooks();
-        User user = libraryService.getUser(userId);
-        String userRentedBookId = user.getSingleRentedBook(bookId);
+        List<BookStock> booksStock = libraryService.getBooksStock();
+        Map<String, LocalDate> borrowedBooks = libraryService.getBorrowedBooks(userId);
 
         //then
-        assertEquals(1, books.size());
-        assertEquals(1, books.get(libraryService.getBook(bookId)));
-        assertEquals(0, rentedBooks.size());
-        assertNull(userRentedBookId);
-    }
-
-    @Test
-    @DisplayName("user not found when returning a book -> should throw exception")
-    public void testReturnBookFailedUserNotFound() {
-        //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-
-        //when
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> libraryService.returnBook(bookId, "123"));
-
-        //then
-        assertEquals(IllegalArgumentException.class, exception.getClass());
-        assertEquals("User not found", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("book not found when returning a book -> should throw exception")
-    public void testReturnBookFailedBookNotFound() {
-        //given
-        String userId = libraryService.addUser("Test User");
-
-        //when
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> libraryService.returnBook("123", userId));
-
-        //then
-        assertEquals(IllegalArgumentException.class, exception.getClass());
-        assertEquals("Book not found", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("user is not renting a book -> should throw exception")
-    public void testReturnBookFailedUserNotRenting() {
-        //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-        String userId = libraryService.addUser("Test User");
-
-        //when
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> libraryService.returnBook(bookId, userId));
-
-        //then
-        assertEquals(IllegalArgumentException.class, exception.getClass());
-        assertEquals("Book not found", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("user got penalty after returning a book")
-    public void testReturnBookFailedUserGotPenalty() {
-        //given
-        BookDto bookDto = new BookDto("Test Book", "Test Author");
-        String bookId = libraryService.addBook(bookDto);
-        String userId = libraryService.addUser("Test User");
-        libraryService.rentBook(bookId, userId);
-
-        //when
-        libraryService.setBookDueDate(bookId,LocalDate.now().minusDays(20));
-        libraryService.returnBook(bookId, userId);
-        User user = libraryService.getUser(userId);
-
-        //then
-        assertEquals(20, user.getPenaltyPoints());
-        assertTrue(user.hasBeenBlocked());
+        assertEquals(2, booksStock.size());
+        assertEquals(1, booksStock.get(0).getQuantity());
+        assertEquals(1, borrowedBooks.size());
+        assertTrue(borrowedBooks.containsKey(bookId2));
     }
 }

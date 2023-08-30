@@ -1,23 +1,18 @@
 package org.example.Model;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 public class User {
     private final String id;
     private final String name;
+    private final Map<String, LocalDate> rentedBooks = new HashMap<>();
     private int penaltyPoints;
     private LocalDate blockedUntil;
 
-    private final List<String> rentedBooks = new ArrayList<>();
-
-    public User(String name) {
+    public User(UserDto userDto) {
         this.id = UUID.randomUUID().toString();
-        this.name = name;
+        this.name = userDto.name();
         this.penaltyPoints = 0;
     }
 
@@ -33,40 +28,38 @@ public class User {
         return penaltyPoints;
     }
 
-    public boolean hasBeenBlocked() {
-        if (blockedUntil == null) {
-            return false;
-        }
-
-        int diff = (int) ChronoUnit.DAYS.between(LocalDate.now(), blockedUntil);
-
-        return diff <= 0;
+    public void setBlockedUntil(LocalDate blockedUntil) {
+        this.blockedUntil = blockedUntil;
     }
 
-    public void addPenaltyPoints(int penaltyPoints) {
-        this.penaltyPoints += penaltyPoints;
-
-        if (this.penaltyPoints >= 10) {
-            this.blockedUntil = LocalDate.now().plusDays(30);
-        }
+    public LocalDate getBlockedUntil() {
+        return blockedUntil;
     }
 
-    public void addBook(String bookId) {
-        rentedBooks.add(bookId);
+    public void setPenaltyPoints(int penaltyPoints) {
+        this.penaltyPoints = penaltyPoints;
     }
 
-    public void removeBook(String bookId) {
+    public void addRentedBook(String bookId) {
+        rentedBooks.put(bookId, LocalDate.now());
+    }
+
+    public void removeRentedBook(String bookId) {
         rentedBooks.remove(bookId);
     }
 
-    public List<String> getRentedBooks() {
+    public Map<String, LocalDate> getRentedBooks() {
         return rentedBooks;
     }
 
-    public String getSingleRentedBook(String bookId) {
-        return rentedBooks.stream()
-                .filter(b -> b.equals(bookId))
-                .findFirst()
-                .orElse(null);
+    @Override
+    public String toString() {
+        return "User{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", rentedBooks=" + rentedBooks +
+                ", penaltyPoints=" + penaltyPoints +
+                ", blockedUntil=" + blockedUntil +
+                '}';
     }
 }
