@@ -1,4 +1,4 @@
-package org.example.Model;
+package org.example.Model.User;
 
 public record UserDto(String name) {
 

@@ -1,4 +1,4 @@
-package org.example.Model;
+package org.example.Model.Book;
 
 import java.util.UUID;
 

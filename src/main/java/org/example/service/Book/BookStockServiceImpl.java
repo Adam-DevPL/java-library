@@ -1,20 +1,21 @@
-package org.example.service;
+package org.example.service.Book;
 
-import org.example.Model.Book;
-import org.example.Model.BookDto;
-import org.example.Model.BookStock;
+import org.example.Model.Book.Book;
+import org.example.Model.Book.BookDto;
+import org.example.Model.Book.BookStock;
+import org.example.service.Utils.CustomException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class BookServiceImpl implements BookService {
+public class BookStockServiceImpl implements BookStockService {
 
     private final List<BookStock> bookStocks = new ArrayList<>();
 
     @Override
     public String addBook(BookDto bookDto) {
-        Optional<BookStock> bookStock = findBook(bookDto.title(), bookDto.author());
+        final Optional<BookStock> bookStock = findBook(bookDto.title(), bookDto.author());
 
         if (bookStock.isPresent()) {
             bookStock.get().increaseQuantity();
@@ -34,7 +35,7 @@ public class BookServiceImpl implements BookService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            return false;
+            throw new CustomException("Book does not exist");
         }
 
         if (bookStock.get().getQuantity() > 1) {
@@ -50,13 +51,20 @@ public class BookServiceImpl implements BookService {
     public Optional<Book> getBook(String bookId) {
         Optional<BookStock> bookStock = findBook(bookId);
 
-        return bookStock.map(BookStock::getBook);
+        if (bookStock.isEmpty()) {
+            throw new CustomException("Book does not exist");
+        }
 
+        if (bookStock.get().getQuantity() == 0) {
+            throw new CustomException("Book is out of stock");
+        }
+
+        return bookStock.map(BookStock::getBook);
     }
 
     @Override
-    public Optional<List<BookStock>> getBooksStock() {
-        return Optional.of(bookStocks);
+    public List<BookStock> getBooksStock() {
+        return bookStocks;
     }
 
     @Override
@@ -64,7 +72,7 @@ public class BookServiceImpl implements BookService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            throw new IllegalArgumentException("Book does not exist");
+            throw new CustomException("Book does not exist");
         }
 
         bookStock.get().increaseQuantity();
@@ -75,8 +83,9 @@ public class BookServiceImpl implements BookService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            throw new IllegalArgumentException("Book does not exist");
+            throw new CustomException("Book does not exist");
         }
+
 
         bookStock.get().decreaseQuantity();
     }
