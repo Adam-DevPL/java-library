@@ -10,6 +10,7 @@ import org.example.service.Book.BookStockService;
 import org.example.service.Booking.BookingService;
 import org.example.service.User.UserService;
 import org.example.service.Utils.CustomException;
+import org.example.service.Utils.exceptions.LibraryException;
 import org.example.service.Validation.Validation;
 
 import java.time.LocalDate;
@@ -35,7 +36,7 @@ public class LibraryServiceImpl implements LibraryService {
             Validation.isBookDtoValid(bookDto);
             return bookStockService.addBook(bookDto);
         } catch (CustomException e) {
-            throw new CustomException(e.getMessage());
+            throw new LibraryException(e);
         }
     }
 
@@ -44,7 +45,7 @@ public class LibraryServiceImpl implements LibraryService {
         try {
             return bookStockService.removeBook(bookId);
         } catch (CustomException e) {
-            throw new CustomException(e.getMessage());
+            throw new LibraryException(e);
         }
     }
 
@@ -54,7 +55,7 @@ public class LibraryServiceImpl implements LibraryService {
             Validation.isUserDtoValid(userDto);
             return userService.addUser(userDto);
         } catch (CustomException e) {
-            throw new CustomException(e.getMessage());
+            throw new LibraryException(e);
         }
     }
 
@@ -85,7 +86,7 @@ public class LibraryServiceImpl implements LibraryService {
             bookingService.borrowBook(bookId, userId);
 
         } catch (CustomException e) {
-            throw new CustomException(e.getMessage());
+            throw new LibraryException(e);
         }
     }
 
@@ -107,7 +108,7 @@ public class LibraryServiceImpl implements LibraryService {
             bookingService.returnBook(bookId, userId);
 
         } catch (CustomException e) {
-            throw new CustomException(e.getMessage());
+            throw new LibraryException(e);
         }
     }
 

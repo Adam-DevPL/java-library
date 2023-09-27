@@ -1,7 +1,10 @@
 package org.example.service.Booking;
 
 import org.example.Model.Booking.Booking;
-import org.example.service.Utils.CustomException;
+import org.example.service.Utils.exceptions.BookingBookRentedException;
+import org.example.service.Utils.exceptions.BookingUserNotAnyBookRentedException;
+import org.example.service.Utils.exceptions.BookingUserNotBookRentedException;
+import org.example.service.Utils.exceptions.BookingUserIsBlockedException;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -30,7 +33,7 @@ public class BookingServiceImpl implements BookingService {
         long totalDaysDifference = ChronoUnit.DAYS.between(booking.get().getDate(), LocalDate.now());
 
         if (totalDaysDifference > 0) {
-            throw new CustomException("User is blocked");
+            throw new BookingUserIsBlockedException(new IllegalArgumentException("User is blocked"));
         }
 
         Optional<Map.Entry<String, LocalDate>> foundBook = booking.get().getBooks().entrySet().stream()
@@ -38,7 +41,7 @@ public class BookingServiceImpl implements BookingService {
                 .findFirst();
 
         if (foundBook.isPresent()) {
-            throw new CustomException("Book already rented");
+            throw new BookingBookRentedException(new IllegalArgumentException("Book is already rented"));
         }
 
         booking.get().getBooks().put(bookId, LocalDate.now().plusDays(7));
@@ -53,7 +56,7 @@ public class BookingServiceImpl implements BookingService {
                 .findFirst();
 
         if (booking.isEmpty()) {
-            throw new CustomException("User does not have any books rented");
+            throw new BookingUserNotAnyBookRentedException(new IllegalArgumentException("User does not have any book rented"));
         }
 
         Optional<Map.Entry<String, LocalDate>> foundBook = booking.get().getBooks().entrySet().stream()
@@ -61,7 +64,7 @@ public class BookingServiceImpl implements BookingService {
                 .findFirst();
 
         if (foundBook.isEmpty()) {
-            throw new CustomException("User does not have this book rented");
+            throw new BookingUserNotBookRentedException(new IllegalArgumentException("User does not have this book rented"));
         }
 
         long totalDaysDifference = ChronoUnit.DAYS.between(foundBook.get().getValue(), LocalDate.now());

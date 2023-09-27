@@ -3,9 +3,12 @@ package org.example.service.User;
 import org.example.Model.User.User;
 import org.example.Model.User.UserDto;
 import org.example.service.Utils.CustomException;
+import org.example.service.Utils.exceptions.UserAlreadyExistException;
+import org.example.service.Utils.exceptions.UserNotExistException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 public class UserServiceImpl implements UserService {
@@ -17,7 +20,7 @@ public class UserServiceImpl implements UserService {
         Optional<User> user = findUser(userDto.name());
 
         if (user.isPresent()) {
-            throw new CustomException("User already exists");
+            throw new UserAlreadyExistException(new IllegalArgumentException("User already exist"));
         }
 
         User newUser = new User(userDto);
@@ -31,7 +34,7 @@ public class UserServiceImpl implements UserService {
         Optional<User> user = findUserById(userId);
 
         if (user.isEmpty()) {
-            throw new CustomException("User does not exist");
+            throw new UserNotExistException(new NoSuchElementException("User does not exist"));
         }
 
         users.remove(user.get());
@@ -44,7 +47,7 @@ public class UserServiceImpl implements UserService {
         Optional<User> user = findUserById(userId);
 
         if (user.isEmpty()) {
-            throw new CustomException("User does not exist");
+            throw new UserAlreadyExistException(new IllegalArgumentException("User already exist"));
         }
 
         return user;

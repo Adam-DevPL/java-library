@@ -3,10 +3,12 @@ package org.example.service.Book;
 import org.example.Model.Book.Book;
 import org.example.Model.Book.BookDto;
 import org.example.Model.Book.BookStock;
-import org.example.service.Utils.CustomException;
+import org.example.service.Utils.exceptions.BookStockBookNotExistException;
+import org.example.service.Utils.exceptions.BookStockBookOutOfStock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 public class BookStockServiceImpl implements BookStockService {
@@ -35,7 +37,7 @@ public class BookStockServiceImpl implements BookStockService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            throw new CustomException("Book does not exist");
+            throw new BookStockBookNotExistException(new NoSuchElementException("Book does not exist"));
         }
 
         if (bookStock.get().getQuantity() > 1) {
@@ -52,11 +54,11 @@ public class BookStockServiceImpl implements BookStockService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            throw new CustomException("Book does not exist");
+            throw new BookStockBookNotExistException(new NoSuchElementException("Book does not exist"));
         }
 
         if (bookStock.get().getQuantity() == 0) {
-            throw new CustomException("Book is out of stock");
+            throw new BookStockBookOutOfStock(new IllegalArgumentException("Book out of stock"));
         }
 
         return bookStock.map(BookStock::getBook);
@@ -72,7 +74,7 @@ public class BookStockServiceImpl implements BookStockService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            throw new CustomException("Book does not exist");
+            throw new BookStockBookNotExistException(new NoSuchElementException("Book does not exist"));
         }
 
         bookStock.get().increaseQuantity();
@@ -83,7 +85,7 @@ public class BookStockServiceImpl implements BookStockService {
         Optional<BookStock> bookStock = findBook(bookId);
 
         if (bookStock.isEmpty()) {
-            throw new CustomException("Book does not exist");
+            throw new BookStockBookNotExistException(new NoSuchElementException("Book does not exist"));
         }
 
 
